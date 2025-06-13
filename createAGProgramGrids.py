@@ -2,6 +2,7 @@ from openpyxl import Workbook
 from openpyxl.worksheet.page import PageMargins, PrintOptions, PrintPageSetup
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Protection, Font
 from openpyxl import utils
+from openpyxl.utils import get_column_letter
 
 import datetime
 from datetime import timedelta
@@ -12,9 +13,10 @@ import math
 import sys
 from pathlib import Path
 
-AG_NAME = "Annual Gathering 2024 - Kansas City, MO"
-START_DATE = datetime.datetime(2024, 7, 3)
+AG_NAME = "Annual Gathering 2025 - Chicago, IL"
+START_DATE = datetime.datetime(2025, 7, 1)
 ROOMS_TO_SUPPRESS = ['Hallway outside Westin: Century Ballroom', 'Sheraton: Van Horn AB', 'Westin: Roanoke']
+INTERVAL = 15
 
 def smart_truncate(content, length=50, suffix=''):
     if len(content) <= length:
@@ -113,7 +115,8 @@ def create_workbook(path, inputfile, outputfile):
         sheet.column_dimensions[utils.cell.get_column_letter(countOfRooms + 1)].width = 5
         sheet.row_dimensions[1].height = 15.75
         for room in range(1, countOfRooms):
-            sheet.column_dimensions[chr(65 + room)].width = 18.5
+            col_letter = get_column_letter(room + 1)
+            sheet.column_dimensions[col_letter].width = 18.5
 
         # set page margins
         sheet.page_margins = PageMargins(left=0.25, right=0.25, top=1, bottom=1, header=0.5, footer=0.5)
@@ -156,7 +159,8 @@ def create_workbook(path, inputfile, outputfile):
         rowi = rowi + 1
 
         # Create the times on left and right.
-        while nextTime.time() != datetime.datetime.strptime('00:30:00',  '%H:%M:%S').time():
+        timeInvervalRowCount = rowi + int((24*60)/INTERVAL)
+        while rowi != timeInvervalRowCount:
             sheet.cell(row=rowi, column=coli).value = nextTime.strftime('%#I:%M')
             sheet.cell(row=rowi, column=coli).font = fth
             sheet.cell(row=rowi, column=coli).alignment = ag
@@ -175,7 +179,7 @@ def create_workbook(path, inputfile, outputfile):
                 sheet.cell(row=rowi, column=coli).border = bdlr
                 sheet.cell(row=rowi, column=coli + countOfRooms).border = bdlr
 
-            nextTime = nextTime + timedelta(minutes=30)
+            nextTime = nextTime + timedelta(minutes=INTERVAL)
             rowi = rowi + 1
 
         # Create the room header
@@ -202,8 +206,8 @@ def create_workbook(path, inputfile, outputfile):
                     sesStartTime = datetime.datetime.strptime(dd["Session Start Time"][ind], "%I:%M %p")
                     sesEndTime = datetime.datetime.strptime(dd["Session End Time"][ind], "%I:%M %p")
 
-                    startInterval = ((sesStartTime - startTime).total_seconds() / 60) / 30
-                    endInterval = ((sesEndTime - sesStartTime).total_seconds() / 60) / 30
+                    startInterval = ((sesStartTime - startTime).total_seconds() / 60) / INTERVAL
+                    endInterval = ((sesEndTime - sesStartTime).total_seconds() / 60) / INTERVAL
 
                     rows = math.ceil((rowi + startInterval))
                     rowe = math.ceil((rows + endInterval)) - 1
