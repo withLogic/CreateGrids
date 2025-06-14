@@ -16,6 +16,7 @@ from pathlib import Path
 AG_NAME = "Annual Gathering 2025 - Chicago, IL"
 START_DATE = datetime.datetime(2025, 7, 2)
 ROOMS_TO_SUPPRESS = ['Ask for location', 'Private Dining Room 7']
+HIDE_ROOMS_WITH_NO_SESSIONS = 1
 INTERVAL = 15
 REQUIRED_COLUMNS = [
     "Session Title",
@@ -231,6 +232,9 @@ def create_workbook(path, inputfile, outputfile):
 
             coli = coli + 1
 
+        currentSheetRooms = set(data.loc[(data['Session Start Date'] == sheet.title.replace("-","/"))]["Room"].dropna())
+        emptyRooms = [(i, room) for i, room in enumerate(roomList) if room not in currentSheetRooms]
+
         # Find the data for the day we're on
         for roomIndex, roomName in enumerate(roomList):
 
@@ -262,6 +266,14 @@ def create_workbook(path, inputfile, outputfile):
                     except AttributeError as e:
                         print(f"{RED}[ERROR]{RESET} Overlapping session schedule. {BLUE}{dd["Session Title"][ind]}{RESET} overaps with another session. Skipping.")
                         pass
+
+        # hide the cells that we do not need
+        if HIDE_ROOMS_WITH_NO_SESSIONS:
+            for index, room in emptyRooms:
+                col_letter = get_column_letter(index + 2)
+                sheet.column_dimensions[col_letter].hidden = True
+
+                print(f"{YELLOW}[INFO]{RESET} {BLUE}{room}{RESET} does not have any sessions on {BLUE}{sheet.title}{RESET}. Setting the column to Hidden.")
 
     workbook.save(path / outputfile)
     print(f"{YELLOW}[INFO]{RESET} AG Grid has been saved here {BLUE}{outputfile}{RESET}.")
